@@ -4,7 +4,7 @@ High-performance hardware packet mirroring service running directly on the **Dat
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Incoming UDP packets matching a configured port (default `12345`) are steered directly into the BlueField-3 DPA Receive Queue (RQ). The DPA RISC-V cores process the packet entirely in hardware:
 * **L2 Swap**: Swaps Ethernet Destination and Source MAC addresses.
@@ -15,7 +15,7 @@ Incoming UDP packets matching a configured port (default `12345`) are steered di
 
 ---
 
-## 📚 Detailed Documentation
+## Detailed Documentation
 
 For in-depth architectural and implementation explanations, refer to:
 * **[Host-Side Initialization & Lifecycle Guide](docs/HOST_INITIALIZATION.md)**: Comprehensive, step-by-step breakdown of every host-side queue, MKey, UAR, and Flow Steering initialization step.
@@ -24,7 +24,7 @@ For in-depth architectural and implementation explanations, refer to:
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```
                        +------------------------------------+
@@ -64,7 +64,7 @@ For in-depth architectural and implementation explanations, refer to:
 
 ---
 
-## ⚙️ Execution Modes
+## Execution Modes
 
 The host application supports both primary deployment modes:
 
@@ -85,7 +85,7 @@ The host application supports both primary deployment modes:
 
 ---
 
-## 📦 Prerequisites
+## Prerequisites
 
 * **NVIDIA DOCA & FlexIO SDK**:
   * Installed libraries: `libflexio`, `libibverbs`, `libmlx5`
@@ -98,7 +98,7 @@ The host application supports both primary deployment modes:
 
 ---
 
-## 🛠 Building the Project
+## Building the Project
 
 The project uses CMake and [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) (no Meson required). Dependencies like `CLI11` are fetched automatically.
 
@@ -112,7 +112,7 @@ cmake --build build -j
 
 ---
 
-## ▶️ Running the Service
+## Running the Service
 
 Start the DPA mirror service with root privileges:
 
@@ -129,7 +129,7 @@ sudo ./build/dpa_mirror -d mlx5_0 -p 12345
 
 ---
 
-## 🧪 Testing and Verification
+## Testing and Verification
 
 A test Python client is provided in `scripts/test_mirror_client.py`:
 
