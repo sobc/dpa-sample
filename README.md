@@ -15,6 +15,14 @@ Incoming UDP packets matching a configured port (default `12345`) are steered di
 
 ---
 
+## 📚 Detailed Documentation
+
+For in-depth architectural and implementation explanations, refer to:
+* **[Host-Side Initialization & Lifecycle Guide](docs/HOST_INITIALIZATION.md)**: Comprehensive, step-by-step breakdown of every host-side queue, MKey, UAR, and Flow Steering initialization step.
+* **[DPA Device-Side Implementation Guide](docs/DPA_DEVICE_IMPLEMENTATION.md)**: Deep dive into the DPA RISC-V execution model, DPACC compilation, memory barriers, WQE construction, and the mathematical proof of checksum invariance.
+
+---
+
 ## 🏗 Architecture
 
 ```
