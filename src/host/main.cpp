@@ -52,10 +52,11 @@ void signal_handler(int) {
 
 class DpaMirrorApp {
 public:
-    DpaMirrorApp(std::string device_name, uint16_t udp_port, bool nic_mode)
+    DpaMirrorApp(std::string device_name, uint16_t udp_port, bool nic_mode, uint64_t client_dmac)
         : device_name_(std::move(device_name)),
           udp_port_(udp_port),
-          nic_mode_(nic_mode) {}
+          nic_mode_(nic_mode),
+          client_dmac_(client_dmac) {}
 
     ~DpaMirrorApp() {
         teardown();
@@ -376,8 +377,9 @@ private:
         }
 
         if (!nic_mode_) {
-            std::cout << "[Host] Running in DPU mode: configuring TX vport forward rule...\n";
-            if (!flow_mgr_.setup_tx_rules(ibv_ctx_, udp_port_)) {
+            std::cout << "[Host] Running in DPU mode: configuring TX vport forward rule for MAC 0x"
+                      << std::hex << client_dmac_ << std::dec << "...\n";
+            if (!flow_mgr_.setup_tx_rules(ibv_ctx_, client_dmac_)) {
                 std::cerr << "[Host] Failed to create TX flow rules (DPU mode)\n";
                 return false;
             }
@@ -487,6 +489,7 @@ private:
     std::string device_name_;
     uint16_t udp_port_;
     bool nic_mode_;
+    uint64_t client_dmac_{0};
 
     struct ibv_context *ibv_ctx_{nullptr};
     struct flexio_app *flexio_app_{nullptr};
@@ -522,6 +525,7 @@ int main(int argc, char **argv)
 
     std::string device = "mlx5_0";
     uint16_t port = 12345;
+    std::string client_mac_str = "a0:88:c2:b6:14:1a"; // Default: fips1 RoCE MAC
 #if defined(__x86_64__)
     bool nic_mode = true;
 #else
@@ -530,11 +534,22 @@ int main(int argc, char **argv)
 
     app.add_option("-d,--device", device, "InfiniBand / mlx5 device name")->capture_default_str();
     app.add_option("-p,--port", port, "UDP port to steer and mirror on the DPA")->capture_default_str();
+    app.add_option("-m,--client-mac", client_mac_str, "Client MAC address for TX forwarding in DPU mode")->capture_default_str();
     app.add_flag("--nic-mode,!--dpu-mode", nic_mode, "Run in NIC/Host mode (default on x86) vs DPU mode (default on ARM)");
 
     CLI11_PARSE(app, argc, argv);
 
-    DpaMirrorApp mirror_app(device, port, nic_mode);
+    // Parse MAC string into 64-bit int
+    uint64_t client_dmac = 0;
+    unsigned int m[6];
+    if (std::sscanf(client_mac_str.c_str(), "%x:%x:%x:%x:%x:%x",
+                    &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]) == 6) {
+        for (int i = 0; i < 6; ++i) {
+            client_dmac = (client_dmac << 8) | (m[i] & 0xFF);
+        }
+    }
+
+    DpaMirrorApp mirror_app(device, port, nic_mode, client_dmac);
     if (!mirror_app.initialize()) {
         std::cerr << "[Host] Initialization failed. Exiting.\n";
         return 1;
@@ -548,3 +563,4 @@ int main(int argc, char **argv)
     std::cout << "[Host] Clean shutdown complete.\n";
     return 0;
 }
+

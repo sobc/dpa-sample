@@ -275,3 +275,4 @@ __dpa_global__ void dpa_mirror_handler(uint64_t thread_arg)
     /* Reschedule thread to wait for next event */
     flexio_dev_thread_reschedule();
 }
+

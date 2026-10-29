@@ -175,7 +175,7 @@ bool FlowSteeringManager::setup_rx_rule(struct ibv_context *ibv_ctx,
 }
 
 bool FlowSteeringManager::setup_tx_rules(struct ibv_context *ibv_ctx,
-                                        uint16_t udp_sport)
+                                        uint64_t client_dmac)
 {
     tx_matcher_ = std::make_unique<FlowMatcher>();
 
@@ -188,7 +188,7 @@ bool FlowSteeringManager::setup_tx_rules(struct ibv_context *ibv_ctx,
 
     tx_matcher_->dr_table_root = mlx5dv_dr_table_create(tx_matcher_->dr_domain, 0);
     if (!tx_matcher_->dr_table_root) {
-        std::cerr << "[FlowSteering] Failed to create TX root table\n";
+        std::cerr << "[FlowSteering] Failed to create TX root table (errno: " << errno << ")\n";
         return false;
     }
 
@@ -199,23 +199,26 @@ bool FlowSteeringManager::setup_tx_rules(struct ibv_context *ibv_ctx,
     }
     match_mask->match_sz = MATCH_VAL_BSIZE;
 
-    // Match on outgoing UDP source port
-    DEVX_SET(dr_match_spec, match_mask->match_buf, ethertype, 0xFFFF);
-    DEVX_SET(dr_match_spec, match_mask->match_buf, ip_protocol, 0xFF);
-    DEVX_SET(dr_match_spec, match_mask->match_buf, udp_sport, 0xFFFF);
+    // Match criteria: Destination MAC (as required by BlueField hardware FDB)
+    DEVX_SET(dr_match_spec, match_mask->match_buf, dmac_47_16, 0xFFFFFFFF);
+    DEVX_SET(dr_match_spec, match_mask->match_buf, dmac_15_0, 0xFFFF);
 
     tx_matcher_->dr_matcher_root = mlx5dv_dr_matcher_create(
         tx_matcher_->dr_table_root, 0, MATCHER_CRITERIA_OUTER, match_mask);
 
     tx_matcher_->dr_table_sws = mlx5dv_dr_table_create(tx_matcher_->dr_domain, 1);
-    if (tx_matcher_->dr_table_sws) {
-        tx_matcher_->dr_matcher_sws = mlx5dv_dr_matcher_create(
-            tx_matcher_->dr_table_sws, 0, MATCHER_CRITERIA_OUTER, match_mask);
+    if (!tx_matcher_->dr_table_sws) {
+        std::cerr << "[FlowSteering] Failed to create TX dr_table_sws (errno: " << errno << ")\n";
+        std::free(match_mask);
+        return false;
     }
+
+    tx_matcher_->dr_matcher_sws = mlx5dv_dr_matcher_create(
+        tx_matcher_->dr_table_sws, 0, MATCHER_CRITERIA_OUTER, match_mask);
     std::free(match_mask);
 
     if (!tx_matcher_->dr_matcher_root || !tx_matcher_->dr_matcher_sws) {
-        std::cerr << "[FlowSteering] Failed to create TX matchers\n";
+        std::cerr << "[FlowSteering] Failed to create TX matchers (errno: " << errno << ")\n";
         return false;
     }
 
@@ -225,9 +228,8 @@ bool FlowSteeringManager::setup_tx_rules(struct ibv_context *ibv_ctx,
         return false;
     }
     match_value->match_sz = MATCH_VAL_BSIZE;
-    DEVX_SET(dr_match_spec, match_value->match_buf, ethertype, 0x0800);
-    DEVX_SET(dr_match_spec, match_value->match_buf, ip_protocol, 0x11);
-    DEVX_SET(dr_match_spec, match_value->match_buf, udp_sport, udp_sport);
+    DEVX_SET(dr_match_spec, match_value->match_buf, dmac_47_16, client_dmac >> 16);
+    DEVX_SET(dr_match_spec, match_value->match_buf, dmac_15_0, client_dmac & 0xFFFF);
 
     // Rule 1: Forward root table to SWS table
     tx_rule_table_ = std::make_unique<FlowRule>();
@@ -254,3 +256,4 @@ bool FlowSteeringManager::setup_tx_rules(struct ibv_context *ibv_ctx,
 }
 
 } // namespace dpa
+

@@ -43,7 +43,7 @@ public:
 
     // Setup TX steering to forward replies out of the wire (DPU mode)
     bool setup_tx_rules(struct ibv_context *ibv_ctx,
-                        uint16_t udp_sport);
+                        uint64_t client_dmac);
 
     void clear();
 
@@ -57,3 +57,4 @@ private:
 };
 
 } // namespace dpa
+
