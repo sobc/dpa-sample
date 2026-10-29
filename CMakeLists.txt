@@ -77,3 +77,9 @@ target_link_libraries(dpa_mirror PRIVATE
     ${MLX5_LIBRARIES}
     pthread
 )
+
+# High-performance C benchmark client
+add_executable(test_mirror_client
+    scripts/test_mirror_client.c
+)
+target_link_libraries(test_mirror_client PRIVATE rt)
